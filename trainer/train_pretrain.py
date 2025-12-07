@@ -14,9 +14,14 @@ from torch import optim, nn  # 优化器和神经网络模块
 from torch.nn.parallel import DistributedDataParallel  # 分布式数据并行
 from torch.utils.data import DataLoader, DistributedSampler  # 数据加载器
 
-from ..model.model import MokioMindConfig
-from ..dataset.lm_dataset import PretrainDataset
-from ..trainer.train_utils import (  # 训练工具函数
+import os
+import sys
+__package__ = "trainer"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from model.model import MokioMindConfig
+from dataset.lm_dataset import PretrainDataset
+from trainer.train_utils import (  # 训练工具函数
     get_lr,
     Logger,
     is_main_process,

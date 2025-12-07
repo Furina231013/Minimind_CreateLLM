@@ -6,6 +6,14 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import Sampler
 
+import os
+import sys
+# 将项目根目录（pytorch_start）添加到Python的模块搜索路径
+# __file__ 是当前脚本（train_pretrain.py）的路径
+# os.path.dirname(__file__) → trainer目录
+# os.path.dirname(...) → 上级目录（pytorch_start）
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 # 检查是否是主进程
 def is_main_process():
@@ -125,7 +133,7 @@ def init_model(
     device="cuda",
 ):
     from transformers import AutoTokenizer
-    from ..model.model import MokioMindForCausalLM
+    from model.model import MokioMindForCausalLM
 
     # 如果没有指定 tokenizer_path，使用项目根目录下的 model 文件夹
     if tokenizer_path is None:

@@ -44,9 +44,9 @@ class PretrainDataset(Dataset):
         # 自回归
         # 自回归训练的核心是「用前 n-1 个 token 预测第 n 个 token」，因此需要对 input_ids 做 “错位切割”：
         # X：输入序列 → 去掉最后一个token（用前max_length-1个token作为模型输入）
-        X = torch.Tensor(input_ids[:-1], dtype = torch.long)
+        X = torch.tensor(input_ids[:-1], dtype = torch.long)
         # Y：标签序列 → 去掉第一个token（每个位置的标签是下一个token）
-        Y = torch.Tensor(input_ids[1:], dtype = torch.long)
+        Y = torch.tensor(input_ids[1:], dtype = torch.long)
         # loss_mask：和X长度匹配 → 去掉最后一个（忽略最后一个位置的pad损失）
-        loss_mask = torch.Tensor(loss_mask[:-1], dtype = torch.long)
+        loss_mask = torch.tensor(loss_mask[:-1], dtype = torch.long)
         return X, Y, loss_mask

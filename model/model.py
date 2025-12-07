@@ -109,7 +109,7 @@ def precomput_freqs_cis(dim:int, end:int=int(32*1024), rope_base:float = 1e-6,
             rope_scaling.get("beta_fast", 4),
             rope_scaling.get("beta_slow", 1),
         )
-    if end / orig_max > 1.0:
+        if end / orig_max > 1.0:
         # 计算corr_dim 这里所有的i是对二维组件的索引，范围是从0到dim//2-1。freqs[i]表示第i个二维组件的频率。
             corr_dim = next((i for i in range(dim//2) if 2*math.pi/ freqs[i] > orig_max), dim//2)
 
@@ -178,7 +178,7 @@ class Attention(nn.Module):
         self.v_proj = nn.Linear(args.hidden_size,  self.num_key_value_heads* self.head_dim, bias=False)
         self.o_proj = nn.Linear(args.num_attention_heads* self.head_dim, args.hidden_size, bias=False)
 
-        self.dropout = nn.Dropout(args.dropout)
+        self.attn_dropout = nn.Dropout(args.dropout)
         self.resid_dropout = nn.Dropout(args.dropout)
         self.dropout = args.dropout
 
@@ -216,8 +216,14 @@ class Attention(nn.Module):
                 else attention_mask.view(bsz, 1, 1, -1).expand(bsz, self, self.n_local_heads, seq_len, -1).bool()
             )
             # self.training 判断模型是否在训练模式下
-            output=F.scaled_dot_product_attention(xq, xk, xv, attn_mask, dropout_p=self.dropout
-            if self.training else 0.0, is_causal = True)
+            output = F.scaled_dot_product_attention(
+                xq,
+                xk,
+                xv,
+                attn_mask=attn_mask,
+                dropout_p=self.dropout if self.training else 0.0,
+                is_causal=True,  # 自回归（因果）注意力
+            )
         else:
             # 计算注意力分数 q·k^T / sqrt(d)
             scores = (xq@xk.transpose(-2,-1))/math.sqrt(self.head_dim)
@@ -225,15 +231,15 @@ class Attention(nn.Module):
                 torch.full((seq_len, seq_len), float('-inf'), device=scores.device),
                 diagonal=1
             ).unsqueeze(0).unsqueeze(0)
-        # 最后拼接头，输出投影，返回
+            # 最后拼接头，输出投影，返回
             if attention_mask is not None:
                 extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
                 extended_attention_mask = (1.0 - extended_attention_mask) * -1e9
                 scores = scores + extended_attention_mask
 
-        scores = F.softmax(scores.float(), dim=-1).type_as(scores)
-        scores = self.attn_dropout(scores)
-        output = scores@xv # @代表点乘
+            scores = F.softmax(scores.float(), dim=-1).type_as(scores)
+            scores = self.attn_dropout(scores)
+            output = scores@xv # @代表点乘
         # [bsz, n_local_heads, seq_len, head_dim]
         output = output.transpose(1,2).reshape(bsz, seq_len, -1)
         output = self.resid_dropout(self.o_proj(output))
@@ -352,7 +358,7 @@ class MokioMindModel(nn.Module):
         start_pos = (
             past_key_values[0][0].shape[1] if past_key_values[0] is not None else 0
         )
-        hiddent_states = self.dropout(self.embed_tokens(input_ids))
+        hidden_states = self.dropout(self.embed_tokens(input_ids))
 
         position_embeddings = (
             self.freqs_cos[start_pos : start_pos + seq_len],

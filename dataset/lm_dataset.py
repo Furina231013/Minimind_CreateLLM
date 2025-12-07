@@ -30,8 +30,23 @@ class PretrainDataset(Dataset):
         sample = self.samples[index]
 
         # 对文本进行tokenizer编码 获取ids和attention_mask
+        # 1. 提取并处理字段
+        context = sample.get("context", "").strip()
+        input_text = sample.get("input", "").strip()
+
+        # 2. 拼接文本（自定义规则）
+        if not context and not input_text:
+            raise ValueError(f"样本无有效文本（context/input 均为空）：{sample}")
+        full_text = ""
+        if context and input_text:
+            full_text = f"{context}\n{input_text}"  # 换行分隔
+        else:
+            full_text = context if context else input_text
+
+        # 对文本进行tokenizer编码 获取ids和attention_mask
         encoding = self.tokenizer(
-            str(sample["text"]),
+            # str(sample["text"]),
+            full_text,
             max_length=self.max_length,
             padding='max_length',
             truncation=True,
